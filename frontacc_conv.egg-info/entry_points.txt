@@ -1,0 +1,2 @@
+[console_scripts]
+frontacc_conv = frontacc_conv:main

@@ -1,0 +1,7 @@
+pandas
+xlrd>=2.0.1
+
+[dev]
+pytest
+black
+flake8

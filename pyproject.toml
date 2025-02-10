@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "frontacc_conv"
+requires-python = ">=3.6"  # Minimum Python version required
+version = "0.1.1"
+description = "Convert GL Account Transactions to QIF format"
+authors = [
+    { name = "Roger Kilchenmann", email = "info@fin-tec.com.au" }
+]
+license = { text = "MIT" }
+readme = "README.md"
+keywords = ["finance", "frontaccounting", "conversion", "QIF", "Excel"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "pandas",
+    "xlrd>=2.0.1"
+]
+
+
+[project.scripts]
+frontacc_conv = "frontacc_conv:main"
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "black",
+    "flake8",
+]
