@@ -37,11 +37,15 @@ class FrontaccConverter:
             xls = pd.ExcelFile(input_file)
             period = pd.read_excel(xls, usecols="B", skiprows=2, nrows=1).iloc[0, 0]
 
+            # convention from frontaccounting GL report for bank accounts: credits are -, debits are +
             opening_balance_debit  = pd.read_excel(xls, usecols="I", skiprows=5, nrows=1).iloc[0, 0]
             opening_balance_credit = pd.read_excel(xls, usecols="J", skiprows=5, nrows=1).iloc[0, 0]
-            opening_balance = opening_balance_credit if pd.notna(opening_balance_credit) else - opening_balance_debit
+            opening_balance = - opening_balance_credit if pd.notna(opening_balance_credit) else opening_balance_debit
             
             last_valid_index = 0
+            # Initialize running total for balance
+            running_balance = opening_balance
+            
             # Read transactions starting from row 9
             df = pd.read_excel(
                 xls, 
@@ -72,13 +76,15 @@ class FrontaccConverter:
                     if pd.isna(row['Date']):  # Stop processing if 'Date' is NaN
                         empty_line_index = _
                         break
-                    trans_amount = row['Debit'] if pd.notna(row['Debit']) else - row['Credit']
+
+                    trans_amount = -row['Credit'] if pd.notna(row['Credit']) else row['Debit']
+                    running_balance += trans_amount  # Update running balance
                     qif_file.write(f"D{row['Date'].strftime('%m/%d/%Y')}\n")
-                    qif_file.write(f"T{trans_amount}\n")
+                    qif_file.write(f"T{trans_amount}\n")  # This will now be a Decimal with 2 digits
                     qif_file.write(f"N{row['Ref']}\n")
                     descr = row['Memo'].replace("\n", "")
                     qif_file.write(f"M{row['Type']}: {descr}\n")
-                    # extraxt payee info
+                    # extract payee info
                     if isinstance(row['Person/Item'], str) and row['Person/Item']:
                         payee_match = re.search(r'(?<=\] )([^/|\n]+)', row['Person/Item'])
                         payee = payee_match.group(1).strip() if payee_match else None
@@ -88,14 +94,19 @@ class FrontaccConverter:
                     qif_file.write("^\n")
 
                 # Read closing balance similar to opening balance
-                closing_balance_debit = pd.read_excel(xls, usecols="I", skiprows=6 + empty_line_index, nrows=1).iloc[0, 0]
-                closing_balance_credit = pd.read_excel(xls, usecols="J", skiprows=6 + empty_line_index, nrows=1).iloc[0, 0]
-                closing_balance = closing_balance_credit if pd.notna(closing_balance_credit) else - closing_balance_debit
+                closing_balance_debit = pd.read_excel(xls, usecols="I", skiprows=8 + empty_line_index, nrows=1).iloc[0, 0]
+                closing_balance_credit = pd.read_excel(xls, usecols="J", skiprows=8 + empty_line_index, nrows=1).iloc[0, 0]
+                closing_balance = - closing_balance_credit if pd.notna(closing_balance_credit) else closing_balance_debit
+
+                # Compare final running balance with closing balance
+                if running_balance != closing_balance:
+                    raise ValueError(f"Final calculated balance {running_balance} does not match closing balance {closing_balance}")
 
             print(f"Successfully converted {input_file} to {output_file}")
             print(f"Period: {period}, Opening Balance: {opening_balance}, Closing Balance: {closing_balance}")
             
         except Exception as e:
+            print(f"Error details: {str(e)}")  # Print the error details for debugging
             raise ConversionError(f"Failed to convert {input_file} to QIF: {str(e)}")
 
 def main(): 
