@@ -9,6 +9,7 @@ import argparse
 import csv
 import os  # Add this import at the top of the file
 import re  # Ensure this import is at the top of the file
+from decimal import Decimal
 
 class ConversionError(Exception):
     """Custom exception for conversion errors"""
@@ -40,7 +41,7 @@ class FrontaccConverter:
             # convention from frontaccounting GL report for bank accounts: credits are -, debits are +
             opening_balance_debit  = pd.read_excel(xls, usecols="I", skiprows=5, nrows=1).iloc[0, 0]
             opening_balance_credit = pd.read_excel(xls, usecols="J", skiprows=5, nrows=1).iloc[0, 0]
-            opening_balance = - opening_balance_credit if pd.notna(opening_balance_credit) else opening_balance_debit
+            opening_balance = - Decimal(f"{float(opening_balance_credit):.2f}") if pd.notna(opening_balance_credit) else Decimal(f"{float(opening_balance_debit):.2f}")
             
             last_valid_index = 0
             # Initialize running total for balance
@@ -62,9 +63,9 @@ class FrontaccConverter:
                     "Person/Item": str, 
                 },
                 converters={
-                    "Debit": lambda x: float(str(x).replace(',', '').replace('.', '.', 1)) if pd.notnull(x) else 0.0,
-                    "Credit": lambda x: float(str(x).replace(',', '').replace('.', '.', 1)) if pd.notnull(x) else 0.0,
-                    "Balance": lambda x: float(str(x).replace(',', '').replace('.', '.', 1)) if pd.notnull(x) else 0.0
+                    "Debit": lambda x: Decimal(str(float(str(x).replace(',', '').replace('.', '.', 1)))) if pd.notnull(x) else Decimal('0.00'),
+                    "Credit": lambda x: Decimal(str(float(str(x).replace(',', '').replace('.', '.', 1)))) if pd.notnull(x) else Decimal('0.00'),
+                    "Balance": lambda x: Decimal(str(float(str(x).replace(',', '').replace('.', '.', 1)))) if pd.notnull(x) else Decimal('0.00')
                 }
             )
             # Start QIF file with account type header
@@ -96,7 +97,7 @@ class FrontaccConverter:
                 # Read closing balance similar to opening balance
                 closing_balance_debit = pd.read_excel(xls, usecols="I", skiprows=8 + empty_line_index, nrows=1).iloc[0, 0]
                 closing_balance_credit = pd.read_excel(xls, usecols="J", skiprows=8 + empty_line_index, nrows=1).iloc[0, 0]
-                closing_balance = - closing_balance_credit if pd.notna(closing_balance_credit) else closing_balance_debit
+                closing_balance = - Decimal(f"{float(closing_balance_credit):.2f}") if pd.notna(closing_balance_credit) else Decimal(f"{float(closing_balance_debit):.2f}")
 
                 # Compare final running balance with closing balance
                 if running_balance != closing_balance:
