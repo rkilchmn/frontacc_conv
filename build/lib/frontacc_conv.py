@@ -30,12 +30,19 @@ class FrontaccConverter:
             FileNotFoundError: If input file doesn't exist
         """
         try:
-            # Read specific cells for period and opening balance
+            # Read the Excel file to find the 'Type' header row
             xls = pd.ExcelFile(excel_path)
+            df_headers = pd.read_excel(xls, header=None)
+            
+            # Find the row index where the first column contains 'Type'
+            type_row_idx = df_headers[df_headers[0].astype(str).str.strip().str.upper() == 'TYPE'].index[0]
+            ROW_OPENING_BALANCE = type_row_idx + 1  # Row with opening balance is right after the header
+            
+            # Read period and opening balance using the dynamic row number
             period = pd.read_excel(xls, usecols="B", skiprows=2, nrows=1).iloc[0, 0]
-
-            opening_balance_debit  = pd.read_excel(xls, usecols="H", skiprows=5, nrows=1).iloc[0, 0]
-            opening_balance_credit = pd.read_excel(xls, usecols="I", skiprows=5, nrows=1).iloc[0, 0]
+            
+            opening_balance_debit = pd.read_excel(xls, usecols="H", skiprows=ROW_OPENING_BALANCE, nrows=1).iloc[0, 0]
+            opening_balance_credit = pd.read_excel(xls, usecols="I", skiprows=ROW_OPENING_BALANCE, nrows=1).iloc[0, 0]
             opening_balance = opening_balance_credit if pd.notna(opening_balance_credit) else - opening_balance_debit
             
             last_valid_index = 0
