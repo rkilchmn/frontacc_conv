@@ -11,8 +11,6 @@ import os  # Add this import at the top of the file
 import re  # Ensure this import is at the top of the file
 from decimal import Decimal
 
-ROW_OPENING_BALANCE = 7
-
 def convert_to_decimal(value):
     if pd.notna(value):
         return Decimal(str(float(str(value).replace(',', '').replace('.', '.', 1))))
@@ -48,14 +46,14 @@ class FrontaccConverter:
             
             # Find the row index where the first column contains 'Type'
             type_row_idx = df_headers[df_headers[0].astype(str).str.strip().str.upper() == 'TYPE'].index[0]
-            ROW_OPENING_BALANCE = type_row_idx + 1  # Row with opening balance is right after the header
+            row_openening_balance = type_row_idx + 1  # Row with opening balance is right after the header
             
             # Read period and opening balance using the dynamic row number
             period = pd.read_excel(xls, usecols="B", skiprows=2, nrows=1).iloc[0, 0]
             
             # convention from frontaccounting GL report for bank accounts: credits are -, debits are +
-            opening_balance_debit = pd.read_excel(xls, usecols="I", skiprows=ROW_OPENING_BALANCE-1, nrows=1).iloc[0, 0]
-            opening_balance_credit = pd.read_excel(xls, usecols="J", skiprows=ROW_OPENING_BALANCE-1, nrows=1).iloc[0, 0]
+            opening_balance_debit = pd.read_excel(xls, usecols="I", skiprows=row_openening_balance-1, nrows=1).iloc[0, 0]
+            opening_balance_credit = pd.read_excel(xls, usecols="J", skiprows=row_openening_balance-1, nrows=1).iloc[0, 0]
             opening_balance = - convert_to_decimal(opening_balance_credit) if pd.notna(opening_balance_credit) else convert_to_decimal(opening_balance_debit)
             
             last_valid_index = 0
@@ -65,7 +63,7 @@ class FrontaccConverter:
             # Read transactions starting from row 9
             df = pd.read_excel(
                 xls, 
-                skiprows=ROW_OPENING_BALANCE+1, 
+                skiprows=row_openening_balance+1, 
                 usecols="A:K", 
                 names=["Type", "Ref", "#", "Date", "Dimension", "Unused", "Person/Item", "Memo", "Debit", "Credit", "Balance"],
                 dtype={
@@ -110,8 +108,8 @@ class FrontaccConverter:
                     qif_file.write("^\n")
 
                 # Read closing balance similar to opening balance
-                closing_balance_debit = pd.read_excel(xls, usecols="I", skiprows=ROW_OPENING_BALANCE + 2 + empty_line_index, nrows=1).iloc[0, 0]
-                closing_balance_credit = pd.read_excel(xls, usecols="J", skiprows=ROW_OPENING_BALANCE + 2 + empty_line_index, nrows=1).iloc[0, 0]
+                closing_balance_debit = pd.read_excel(xls, usecols="I", skiprows=row_openening_balance + 2 + empty_line_index, nrows=1).iloc[0, 0]
+                closing_balance_credit = pd.read_excel(xls, usecols="J", skiprows=row_openening_balance + 2 + empty_line_index, nrows=1).iloc[0, 0]
                 closing_balance = - convert_to_decimal(closing_balance_credit) if pd.notna(closing_balance_credit) else convert_to_decimal(closing_balance_debit)
 
                 # Compare final running balance with closing balance
